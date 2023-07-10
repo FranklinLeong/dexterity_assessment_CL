@@ -52,4 +52,8 @@ def angle(a, b, c):
     v1_u = unit_vector(v1)
     v2_u = unit_vector(v2)
     return np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0)) * 180 / np.pi
+
+def joint_angles(joint = 'elbow_r', mvt = 'flexion', data):
+    if joint = 'elbow_r'
+        angle
     

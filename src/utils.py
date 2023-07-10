@@ -42,7 +42,7 @@ def get_df_points(data, col = 'kp3ds'):
 def unit_vector(vector):
     return vector / np.linalg.norm(vector)
 
-""" Returns the angle in radians between vectors 'v1' and 'v2'. 
+""" Returns the angle in degrees between vectors 'v1' and 'v2'. 
 Vector v1 is point_a - point_b, and vector v2 is point_c - point_b.
 Point b is the joint of interest """
 def angle(a, b, c):
@@ -51,5 +51,5 @@ def angle(a, b, c):
 
     v1_u = unit_vector(v1)
     v2_u = unit_vector(v2)
-    return np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0))
+    return np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0)) * 180 / np.pi
     

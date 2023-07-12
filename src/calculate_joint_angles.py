@@ -377,7 +377,9 @@ if __name__ == '__main__':
 
     #rotate to orient the pose better
     R = utils.get_R_z(np.pi/2)
+    # number of frames
     for framenum in range(kpts.shape[0]):
+        #number of points
         for kpt_num in range(kpts.shape[1]):
             kpts[framenum,kpt_num] = R @ kpts[framenum,kpt_num]
 

@@ -3,6 +3,8 @@ import sys
 import utils
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import copy
+from scipy.signal import medfilt
 
 def read_keypoints(filename):
 
@@ -75,18 +77,15 @@ def add_hips_and_neck(kpts):
 #remove jittery keypoints by applying a median filter along each axis
 def median_filter(kpts, window_size = 3):
 
-    import copy
     filtered = copy.deepcopy(kpts)
-
-    from scipy.signal import medfilt
 
 
     #apply median filter to get rid of poor keypoints estimations
     for joint in filtered['joints']:
         joint_kpts = filtered[joint]
-        xs = joint_kpts[:,0]
-        ys = joint_kpts[:,1]
-        zs = joint_kpts[:,2]
+        xs = [value[0] for value in joint_kpts]
+        ys = [value[1] for value in joint_kpts]
+        zs = [value[2] for value in joint_kpts]
         xs = medfilt(xs, window_size)
         ys = medfilt(ys, window_size)
         zs = medfilt(zs, window_size)

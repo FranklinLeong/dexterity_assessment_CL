@@ -272,11 +272,19 @@ def get_hips_position_and_rotation(frame_pos, root_joint = 'hips', root_define_j
     root_position = frame_pos[root_joint]
 
     #calculate unit vectors of root joint
+
+    # x axis
     root_u = frame_pos[root_define_joints[0]] - frame_pos[root_joint]
     root_u = root_u/np.sqrt(np.sum(np.square(root_u)))
+
+    # y axis
     root_v = frame_pos[root_define_joints[1]] - frame_pos[root_joint]
     root_v = root_v/np.sqrt(np.sum(np.square(root_v)))
+
+    # z axis
     root_w = np.cross(root_u, root_v)
+
+
 
     #Make the rotation matrix
     C = np.array([root_u, root_v, root_w]).T

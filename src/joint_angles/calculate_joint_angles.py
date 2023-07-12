@@ -1,10 +1,101 @@
 import numpy as np
 import sys
-import utils
+#import utils
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import copy
 from scipy.signal import medfilt
+
+# --- Helper functions -- 
+
+def get_R_x(theta):
+    R = np.array([[1, 0, 0],
+                  [0, np.cos(theta), -np.sin(theta)],
+                  [0, np.sin(theta),  np.cos(theta)]])
+    return R
+
+def get_R_y(theta):
+    R = np.array([[np.cos(theta), 0, np.sin(theta)],
+                  [0, 1, 0],
+                  [-np.sin(theta), 0,  np.cos(theta)]])
+    return R
+
+def get_R_z(theta):
+    R = np.array([[np.cos(theta), -np.sin(theta), 0],
+                  [np.sin(theta), np.cos(theta), 0],
+                  [0, 0, 1]])
+    return R
+
+
+#calculate rotation matrix to take A vector to B vector
+def Get_R(A,B):
+
+    #get unit vectors
+    uA = A/np.sqrt(np.sum(np.square(A)))
+    uB = B/np.sqrt(np.sum(np.square(B)))
+
+    #get products
+    dotprod = np.sum(uA * uB)
+    crossprod = np.sqrt(np.sum(np.square(np.cross(uA,uB)))) #magnitude
+
+    #get new unit vectors
+    u = uA
+    v = uB - dotprod*uA
+    v = v/np.sqrt(np.sum(np.square(v)))
+    w = np.cross(uA, uB)
+    w = w/np.sqrt(np.sum(np.square(w)))
+
+    #get change of basis matrix
+    C = np.array([u, v, w])
+
+    #get rotation matrix in new basis
+    R_uvw = np.array([[dotprod, -crossprod, 0],
+                      [crossprod, dotprod, 0],
+                      [0, 0, 1]])
+
+    #full rotation matrix
+    R = C.T @ R_uvw @ C
+    #print(R)
+    return R
+
+#Same calculation as above using a different formalism
+def Get_R2(A, B):
+
+    #get unit vectors
+    uA = A/np.sqrt(np.sum(np.square(A)))
+    uB = B/np.sqrt(np.sum(np.square(B)))
+
+    v = np.cross(uA, uB)
+    s = np.sqrt(np.sum(np.square(v)))
+    c = np.sum(uA * uB)
+
+    vx = np.array([[0, -v[2], v[1]],
+                   [v[2], 0, -v[0]],
+                   [-v[1], v[0], 0]])
+
+    R = np.eye(3) + vx + vx@vx*((1-c)/s**2)
+
+    return R
+
+
+#decomposes given R matrix into rotation along each axis. In this case Rz @ Ry @ Rx
+def Decompose_R_ZYX(R):
+
+    #decomposes as RzRyRx. Note the order: ZYX <- rotation by x first
+    thetaz = np.arctan2(R[1,0], R[0,0])
+    thetay = np.arctan2(-R[2,0], np.sqrt(R[2,1]**2 + R[2,2]**2))
+    thetax = np.arctan2(R[2,1], R[2,2])
+
+    return thetaz, thetay, thetax
+
+def Decompose_R_ZXY(R):
+
+    #decomposes as RzRXRy. Note the order: ZXY <- rotation by y first
+    thetaz = np.arctan2(-R[0,1], R[1,1])
+    thetay = np.arctan2(-R[2,0], R[2,2])
+    thetax = np.arctan2(R[2,1], np.sqrt(R[2,0]**2 + R[2,2]**2))
+
+    return thetaz, thetay, thetax
 
 def read_keypoints(filename):
 
@@ -189,7 +280,7 @@ def get_hips_position_and_rotation(frame_pos, root_joint = 'hips', root_define_j
 
     #Make the rotation matrix
     C = np.array([root_u, root_v, root_w]).T
-    thetaz,thetay, thetax = utils.Decompose_R_ZXY(C)
+    thetaz,thetay, thetax = Decompose_R_ZXY(C)
     root_rotation = np.array([thetaz, thetax, thetay])
 
     return root_position, root_rotation
@@ -201,13 +292,13 @@ def get_joint_rotations(joint_name, joints_hierarchy, joints_offsets, frame_rota
     for i, parent_name in enumerate(joints_hierarchy[joint_name]):
         if i == 0: continue
         _r_angles = frame_rotations[parent_name]
-        R = utils.get_R_z(_r_angles[0]) @ utils.get_R_x(_r_angles[1]) @ utils.get_R_y(_r_angles[2])
+        R = get_R_z(_r_angles[0]) @ get_R_x(_r_angles[1]) @ get_R_y(_r_angles[2])
         _invR = _invR@R.T
 
     b = _invR @ (frame_pos[joint_name] - frame_pos[joints_hierarchy[joint_name][0]])
 
-    _R = utils.Get_R2(joints_offsets[joint_name], b)
-    tz, ty, tx = utils.Decompose_R_ZXY(_R)
+    _R = Get_R2(joints_offsets[joint_name], b)
+    tz, ty, tx = Decompose_R_ZXY(_R)
     joint_rs = np.array([tz, tx, ty])
     #print(np.degrees(joint_rs))
 
@@ -222,7 +313,7 @@ def get_rotation_chain(joint, hierarchy, frame_rotations):
     R = np.eye(3)
     for parent in hierarchy:
         angles = frame_rotations[parent]
-        _R = utils.get_R_z(angles[0])@utils.get_R_x(angles[1])@utils.get_R_y(angles[2])
+        _R = get_R_z(angles[0])@get_R_x(angles[1])@get_R_y(angles[2])
         R = R @ _R
 
     return R
@@ -364,30 +455,3 @@ def draw_skeleton_from_joint_angles(kpts):
         plt.pause(0.01)
         ax.cla()
     plt.close()
-
-if __name__ == '__main__':
-
-    if len(sys.argv) != 2:
-        print('Call program with input pose file')
-        quit()
-
-    filename = sys.argv[1]
-    kpts = read_keypoints(filename)
-
-    #rotate to orient the pose better
-    R = utils.get_R_z(np.pi/2)
-    # number of frames
-    for framenum in range(kpts.shape[0]):
-        #number of points
-        for kpt_num in range(kpts.shape[1]):
-            kpts[framenum,kpt_num] = R @ kpts[framenum,kpt_num]
-
-    kpts = convert_to_dictionary(kpts)
-    add_hips_and_neck(kpts)
-    filtered_kpts = median_filter(kpts)
-    get_bone_lengths(filtered_kpts)
-    get_base_skeleton(filtered_kpts)
-
-    calculate_joint_angles(filtered_kpts)
-    #draw_skeleton_from_joint_coordinates(filtered_kpts)
-    draw_skeleton_from_joint_angles(filtered_kpts)

@@ -74,3 +74,21 @@ def joint_angles(data, t, joint = 'elbow_r', mvt = 'flexion'):
         c = data['wrist_l'][t]
         return angle(a, b, c)   
 """
+
+""" Returns mean angular velocity of angular velocities at each timestep
+data = angles of joint of interest, t1 and t2 are expressed in seconds. """
+def angle_velocity(data, t1, t2, name = 'leftelbow', axis = 0):
+
+    idx = time_id(data, t1, t2)
+    angles = [point[axis] for point in data[name][idx[0]:idx[1]]]
+    times = data['time'][idx[0]:idx[1]]
+    sum = 0
+    n = len(angles)
+
+    for i in range(n-1):
+        w_i = np.abs((angles[i+1] - angles[i])/(times[i+1 + idx[0]] - times[i + idx[0]]))
+        sum = sum + w_i
+    
+    velocity = 1/n * sum
+
+    return velocity

@@ -92,3 +92,19 @@ def angle_velocity(data, t1, t2, name = 'leftelbow', axis = 0):
     velocity = 1/n * sum
 
     return velocity
+
+""" Returns the distance of the total trajectory of one joint given a period of time"""
+def dist_trajectory(data, t1, t2, joint_name):
+    idx = time_id(data, t1, t2)
+    points = data[joint_name][idx[0]:idx[1]]
+    distance = 0
+    dist_trajectory = 0
+    n = len(points)
+
+    for i in range(n-1):
+        a = points[i + idx[0]]
+        b = points[i+1 + idx[0]]
+        distance = np.linalg.norm(b-a)
+        dist_trajectory = dist_trajectory + distance
+
+    return dist_trajectory

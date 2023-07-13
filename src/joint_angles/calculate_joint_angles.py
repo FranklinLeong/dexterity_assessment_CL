@@ -143,6 +143,11 @@ def add_hips_and_neck(kpts):
     kpts['hips'] = hips
     kpts['joints'].append('hips')
 
+    #add ground point for trunk joint angle
+    ground = np.array([np.array([value[0], value[1], 0]) for value in kpts['hips']])
+    kpts['ground'] = ground
+    kpts['joints'].append('ground')
+
 
     #add neck kpts
     difference = kpts['leftshoulder'] - kpts['rightshoulder']
@@ -152,7 +157,8 @@ def add_hips_and_neck(kpts):
     kpts['joints'].append('neck')
 
     #define the hierarchy of the joints
-    hierarchy = {'hips': [],
+    hierarchy = {'ground': [],
+                 'hips': ['ground'],
                  'lefthip': ['hips'], 'leftknee': ['lefthip', 'hips'], 'leftfoot': ['leftknee', 'lefthip', 'hips'],
                  'righthip': ['hips'], 'rightknee': ['righthip', 'hips'], 'rightfoot': ['rightknee', 'righthip', 'hips'],
                  'neck': ['hips'],
@@ -195,6 +201,7 @@ def get_bone_lengths(kpts):
     bone_lengths = {}
     for joint in kpts['joints']:
         if joint == 'hips': continue
+        elif joint == 'ground': continue
         parent = kpts['hierarchy'][joint][0]
 
         joint_kpts = kpts[joint]
@@ -231,6 +238,8 @@ def get_base_skeleton(kpts, normalization_bone = 'neck'):
     offset_directions['rightfoot'] = np.array([0,-1, 0])
 
     offset_directions['neck'] = np.array([0,1,0])
+    #add ground value
+    offset_directions['ground'] = np.array([0, -1, 0])
 
     offset_directions['leftshoulder'] = np.array([1,0,0])
     offset_directions['leftelbow'] = np.array([1,0,0])

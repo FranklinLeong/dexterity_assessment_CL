@@ -108,3 +108,20 @@ def dist_trajectory(data, t1, t2, joint_name):
         dist_trajectory = dist_trajectory + distance
 
     return dist_trajectory
+
+
+"""Returns the exact time.. ?"""
+def time_trajectory(data, t1, t2): 
+    idx = time_id(data, t1, t2)
+    time = data['time'][idx[0]] - data['time'][idx[1]]
+
+    return np.abs(time)
+
+""" Returns the straight line distance between 2 points"""
+def distance_AB(data, t1, t2, joint_name):
+    idx = time_id(data, t1, t2)
+    point_a = data[joint_name][idx[0]]
+    point_b = data[joint_name][idx[1]]
+    distance = np.linalg.norm(point_b - point_a)
+
+    return distance

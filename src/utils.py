@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 '''Pipeline and helper functions'''
 
@@ -43,6 +44,36 @@ def time_id(data, t1, t2, col_name = 'time'):
     closest_index_1 = (data[col_name] - t1).abs().idxmin()
     closest_index_2 = (data[col_name] - t2).abs().idxmin()
     return [closest_index_1, closest_index_2]
+
+""" Plot joint angles around 3 axises during a period of an event"""
+def plot_angles(data, t1, t2, joint_name, event, x_vertical1 = None, x_vertical2 = None, label_vertical1=None, label_vertical2=None, vertical_line1 = False, vertical_line2 = False):
+    idx = time_id(data, t1, t2)
+    angles_x = [point[0] for point in data[joint_name][idx[0]:idx[1]]]
+    angles_y = [point[1] for point in data[joint_name][idx[0]:idx[1]]]
+    angles_z = [point[2] for point in data[joint_name][idx[0]:idx[1]]]
+    time = data['time'][idx[0]:idx[1]]
+    
+    if 'shoulder' in joint_name:
+        plt.plot(time, angles_x, label = 'Rotation around x-axis (flexion)')
+        plt.plot(time, angles_y, label = 'Rotation around y-axis')
+        plt.plot(time, angles_z, label = 'Rotation around z-axis (abduction)')
+    elif 'elbow' in joint_name:
+        plt.plot(time, angles_x, label = 'Rotation around x-axis')
+        plt.plot(time, angles_y, label = 'Rotation around y-axis')
+        plt.plot(time, angles_z, label = 'Rotation around z-axis (flexion)')
+    
+    if vertical_line1:
+        plt.axvline(x_vertical1, label = label_vertical1, linestyle = '--', color = 'grey')
+
+    if vertical_line2:
+        plt.axvline(x_vertical2, label = label_vertical2, linestyle = '--', color = 'red')
+
+    plt.gca().invert_yaxis()
+    plt.title(f'{joint_name} during {event}')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Degree')
+    plt.legend()
+    plt.show()
 
 # --- INTERMEDIARY FEATURES ---
 

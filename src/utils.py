@@ -55,6 +55,7 @@ def plot_angles(data, t1, t2, joint_name, event, x_vertical1 = None, x_vertical2
     angles_z = [point[2] for point in data[joint_name][idx[0]:idx[1]]]
     time = data['time'][idx[0]:idx[1]]
     
+    plt.figure(figsize=(12,5))
     if 'shoulder' in joint_name:
         plt.plot(time, angles_x, label = 'Rotation around x-axis (flexion)')
         plt.plot(time, angles_y, label = 'Rotation around y-axis')
@@ -63,7 +64,11 @@ def plot_angles(data, t1, t2, joint_name, event, x_vertical1 = None, x_vertical2
         plt.plot(time, angles_x, label = 'Rotation around x-axis')
         plt.plot(time, angles_y, label = 'Rotation around y-axis')
         plt.plot(time, angles_z, label = 'Rotation around z-axis (flexion)')
-    
+    if 'trunk' in joint_name:
+        plt.plot(time, angles_x, label = 'Rotation around x-axis (flexion)')
+        plt.plot(time, angles_y, label = 'Rotation around y-axis')
+        plt.plot(time, angles_z, label = 'Rotation around z-axis (lateral flexion)')
+
     if vertical_line1:
         plt.axvline(x_vertical1, label = label_vertical1, linestyle = '--', color = 'grey')
 
@@ -78,16 +83,22 @@ def plot_angles(data, t1, t2, joint_name, event, x_vertical1 = None, x_vertical2
     plt.show()
 
 """ Plots all average joint velocities given a period of time in an event. """
-def plot_joint_velocities(data, t1, t2, event):
+def plot_joint_velocities(data, t1, t2, event, with_error = False):
     keys = [joint for joint in data.columns.values if 'angles' in joint]
     velocities_x = np.array([angle_velocity(data, t1, t2, name = key, axis = 0) for key in keys])
     velocities_y = np.array([angle_velocity(data, t1, t2, name = key, axis = 1) for key in keys])
     velocities_z = np.array([angle_velocity(data, t1, t2, name = key, axis = 2) for key in keys])
     plt.figure(figsize=(15,6))
 
-    plt.errorbar(x = keys, y = velocities_x[:,0], yerr = velocities_x[:,1], label = 'Rotation around x-axis', capsize = 5, fmt='o')
-    plt.errorbar(x = keys, y = velocities_y[:,0], yerr = velocities_y[:,1], label = 'Rotation around y-axis', capsize=5, fmt = 'x')
-    plt.errorbar(x = keys, y = velocities_z[:,0], yerr = velocities_z[:,1], label = 'Rotation around z-axis', capsize=5, fmt = 'v')
+    if with_error:
+        plt.errorbar(x = keys, y = velocities_x[:,0], yerr = velocities_x[:,1], label = 'Rotation around x-axis', capsize = 5, fmt='o')
+        plt.errorbar(x = keys, y = velocities_y[:,0], yerr = velocities_y[:,1], label = 'Rotation around y-axis', capsize=5, fmt = 'x')
+        plt.errorbar(x = keys, y = velocities_z[:,0], yerr = velocities_z[:,1], label = 'Rotation around z-axis', capsize=5, fmt = 'v')
+    else:
+        plt.scatter(x = keys, y = velocities_x[:,0], label = 'Rotation around x-axis')
+        plt.scatter(x = keys, y = velocities_y[:,0], label = 'Rotation around y-axis')
+        plt.scatter(x = keys, y = velocities_z[:,0], label = 'Rotation around z-axis')
+
     plt.title(f'Average joint velocities when {event}')
     plt.ylabel('Average joint velocities [deg/s]')
     plt.legend()

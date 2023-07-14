@@ -45,6 +45,8 @@ def time_id(data, t1, t2, col_name = 'time'):
     closest_index_2 = (data[col_name] - t2).abs().idxmin()
     return [closest_index_1, closest_index_2]
 
+# --- PLOT FUNCTIONS ---
+
 """ Plot joint angles around 3 axises during a period of an event"""
 def plot_angles(data, t1, t2, joint_name, event, x_vertical1 = None, x_vertical2 = None, label_vertical1=None, label_vertical2=None, vertical_line1 = False, vertical_line2 = False):
     idx = time_id(data, t1, t2)
@@ -69,9 +71,25 @@ def plot_angles(data, t1, t2, joint_name, event, x_vertical1 = None, x_vertical2
         plt.axvline(x_vertical2, label = label_vertical2, linestyle = '--', color = 'red')
 
     plt.gca().invert_yaxis()
-    plt.title(f'{joint_name} during {event}')
+    plt.title(f'{joint_name} when {event}')
     plt.xlabel('Time [s]')
-    plt.ylabel('Degree')
+    plt.ylabel('Angle [deg]')
+    plt.legend()
+    plt.show()
+
+""" Plots all average joint velocities given a period of time in an event. """
+def plot_joint_velocities(data, t1, t2, event):
+    keys = [joint for joint in data.columns.values if 'angles' in joint]
+    velocities_x = np.array([angle_velocity(data, t1, t2, name = key, axis = 0) for key in keys])
+    velocities_y = np.array([angle_velocity(data, t1, t2, name = key, axis = 1) for key in keys])
+    velocities_z = np.array([angle_velocity(data, t1, t2, name = key, axis = 2) for key in keys])
+    plt.figure(figsize=(15,6))
+
+    plt.errorbar(x = keys, y = velocities_x[:,0], yerr = velocities_x[:,1], label = 'Rotation around x-axis', capsize = 5, fmt='o')
+    plt.errorbar(x = keys, y = velocities_y[:,0], yerr = velocities_y[:,1], label = 'Rotation around y-axis', capsize=5, fmt = 'x')
+    plt.errorbar(x = keys, y = velocities_z[:,0], yerr = velocities_z[:,1], label = 'Rotation around z-axis', capsize=5, fmt = 'v')
+    plt.title(f'Average joint velocities when {event}')
+    plt.ylabel('Average joint velocities [deg/s]')
     plt.legend()
     plt.show()
 
@@ -91,38 +109,26 @@ def angle(a, b, c):
     v1_u = unit_vector(v1)
     v2_u = unit_vector(v2)
     return np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0)) * 180 / np.pi
-"""
-def joint_angles(data, t, joint = 'elbow_r', mvt = 'flexion'):
-    if joint == 'elbow_r':
-        a = data['shoulder_r'][t]
-        b = data[joint][t]
-        c = data['wrist_r'][t]
-        return angle(a, b, c)
-    
-    elif joint == 'elbow_l':
-        a = data['shoulder_l'][t]
-        b = data[joint][t]
-        c = data['wrist_l'][t]
-        return angle(a, b, c)   
-"""
 
 """ Returns mean angular velocity of angular velocities at each timestep
 data = angles of joint of interest, t1 and t2 are expressed in seconds. """
-def angle_velocity(data, t1, t2, name = 'leftelbow', axis = 0):
+def angle_velocity(data, t1, t2, name = 'leftelbow_angles', axis = 0):
 
     idx = time_id(data, t1, t2)
     angles = [point[axis] for point in data[name][idx[0]:idx[1]]]
     times = data['time'][idx[0]:idx[1]]
     sum = 0
     n = len(angles)
+    w = []
 
     for i in range(n-1):
         w_i = np.abs((angles[i+1] - angles[i])/(times[i+1 + idx[0]] - times[i + idx[0]]))
-        sum = sum + w_i
+        w.append(w_i)
     
-    velocity = 1/n * sum
+    velocity = 1/n * np.sum(w)
+    std = np.std(w)
 
-    return velocity
+    return (velocity, std)
 
 """ Returns the distance of the total trajectory of one joint given a period of time"""
 def dist_trajectory(data, t1, t2, joint_name):

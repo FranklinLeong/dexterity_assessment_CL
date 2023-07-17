@@ -47,7 +47,7 @@ def time_id(data, t1, t2, col_name = 'time'):
 
 # --- PLOT FUNCTIONS ---
 
-""" Plot joint angles around 3 axises during a period of an event"""
+""" Plot joint angles around 3 axis during a period of an event"""
 def plot_angles(data, t1, t2, joint_name, event, x_vertical1 = None, x_vertical2 = None, label_vertical1=None, label_vertical2=None, vertical_line1 = False, vertical_line2 = False):
     idx = time_id(data, t1, t2)
     angles_x = [point[0] for point in data[joint_name][idx[0]:idx[1]]]
@@ -110,16 +110,17 @@ def plot_joint_velocities(data, t1, t2, event, with_error = False):
 def unit_vector(vector):
     return vector / np.linalg.norm(vector)
 
-""" Returns the angle in degrees between vectors 'v1' and 'v2'. 
-Vector v1 is point_a - point_b, and vector v2 is point_c - point_b.
-Point b is the joint of interest """
-def angle(a, b, c):
-    v1 = unit_vector(a-b)
-    v2 = unit_vector(c-b)
-
-    v1_u = unit_vector(v1)
-    v2_u = unit_vector(v2)
-    return np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0)) * 180 / np.pi
+""" Add naive joint angles to dataframe. """
+def add_naive_joint_angles(data, parent_joint, joint, child_joint):
+    v1 = data[parent_joint] - data[joint]
+    v2 = data[child_joint] - data[joint]
+    angles = []
+    for v1_u, v2_u in zip(v1, v2):
+        v1_u = unit_vector(v1_u)
+        v2_u = unit_vector(v2_u)
+        angle = np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0)) * 180 / np.pi
+        angles.append(angle)
+    data[joint+'_angle'] = angles
 
 """ Returns mean angular velocity of angular velocities at each timestep
 data = angles of joint of interest, t1 and t2 are expressed in seconds. """
@@ -173,3 +174,20 @@ def distance_AB(data, t1, t2, joint_name):
     distance = np.linalg.norm(point_b - point_a)
 
     return distance
+
+# --- FINAL FEATURES ---
+
+""" Return the Range of Motion. """
+def RoM(data, t1, t2, joint, axis = None): 
+    idx = time_id(data, t1, t2)
+    
+    if axis == None:
+        angles = data[joint][idx[0]:idx[1]]
+    else: 
+        angles = [value[axis] for value in data[joint][idx[0]:idx[1]]]
+        
+    max_angle = np.max(angles)
+    min_angle = np.min(angles)
+    RoM = max_angle - min_angle
+
+    return RoM

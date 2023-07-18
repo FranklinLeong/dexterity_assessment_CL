@@ -228,7 +228,7 @@ def get_base_skeleton(kpts, normalization_bone = 'neck'):
     offset_directions['rightfoot'] = np.array([0,-1, 0])
 
     offset_directions['neck'] = np.array([0,1,0])
-    #add ground value
+
 
     offset_directions['leftshoulder'] = np.array([1,0,0])
     offset_directions['leftelbow'] = np.array([1,0,0])

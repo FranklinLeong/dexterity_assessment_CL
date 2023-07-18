@@ -72,6 +72,10 @@ def plot_angles(data, t1, t2, joint_name, event, x_vertical1 = None, x_vertical2
         plt.plot(time, angles_x, label = 'Rotation around x-axis (flexion)')
         plt.plot(time, angles_y, label = 'Rotation around y-axis')
         plt.plot(time, angles_z, label = 'Rotation around z-axis (lateral flexion)')
+    if 'neck' in joint_name:
+        plt.plot(time, angles_x, label = 'Rotation around x-axis (forward flexion)')
+        plt.plot(time, angles_y, label = 'Rotation around y-axis')
+        plt.plot(time, angles_z, label = 'Rotation around z-axis (lateral flexion)')
 
     if vertical_line1:
         plt.axvline(x_vertical1, label = label_vertical1, linestyle = '--', color = 'grey')

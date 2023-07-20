@@ -45,6 +45,7 @@ def time_id(data, t1, t2, col_name = 'time'):
     closest_index_2 = (data[col_name] - t2).abs().idxmin()
     return [closest_index_1, closest_index_2]
 
+
 # --- PLOT FUNCTIONS ---
 
 """ Plot joint angles around 3 axis during a period of an event"""

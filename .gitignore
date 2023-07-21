@@ -10,6 +10,8 @@ data
 ### Python ###
 # Byte-compiled / optimized / DLL files
 src/__pycache__/
+src/joint_angles/__pycache__
+src/__temp__.mp4
 *.py[cod]
 *$py.class
 

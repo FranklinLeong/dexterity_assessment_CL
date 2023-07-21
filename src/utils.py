@@ -151,6 +151,26 @@ def angle_velocity(data, t1, t2, name = 'leftelbow_angles', axis = 0):
 
     return (velocity, std)
 
+""" Returns mean angular velocity of angular velocities at each timestep
+data = angles of joint of interest, t1 and t2 are expressed in seconds. """
+def angle_velocity2(data, t1, t2, name = 'leftelbow_angles'):
+
+    idx = time_id(data, t1, t2)
+    angles = data[name][idx[0]:idx[1]]
+    times = data['time'][idx[0]:idx[1]]
+    sum = 0
+    n = len(angles)
+    w = []
+
+    for i in range(n-1):
+        w_i = np.abs((angles[i+1 + idx[0]] - angles[i + idx[0]])/(times[i+1 + idx[0]] - times[i + idx[0]]))
+        w.append(w_i)
+    
+    velocity = 1/n * np.sum(w)
+    std = np.std(w)
+
+    return (velocity, std)
+
 """ Returns the distance of the total trajectory of one joint given a period of time"""
 def dist_trajectory(data, t1, t2, joint_name):
     idx = time_id(data, t1, t2)

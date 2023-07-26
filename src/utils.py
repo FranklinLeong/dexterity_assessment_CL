@@ -61,13 +61,13 @@ def plot_bone(ax, data, joint1, joint2, time, color):
 """ Plot whole skeleton (without head) on a specific time and save png image in plot_img folder"""
 def plot_skeleton(data, time, fig, ax):
 
-    ax.set_xlim3d(2000, 4000)
-    ax.set_ylim3d(-2000, 3000)
-    ax.set_zlim3d(-1500, 500)
+    ax.set_xlim3d(2, 4)
+    ax.set_ylim3d(-2, 3)
+    ax.set_zlim3d(-1.5, 0.5)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-    
+
     cmap = plt.cm.get_cmap('cool')
     colors = []
     for i in range(12): 

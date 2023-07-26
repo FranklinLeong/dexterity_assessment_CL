@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import glob
+import cv2
+import os
 
 '''Pipeline and helper functions'''
 
@@ -44,6 +47,76 @@ def time_id(data, t1, t2, col_name = 'time'):
     closest_index_1 = (data[col_name] - t1).abs().idxmin()
     closest_index_2 = (data[col_name] - t2).abs().idxmin()
     return [closest_index_1, closest_index_2]
+
+
+# --- MAKE VIDEOS FUNCTIONS ---
+
+""" Plot one bone between 2 joints"""
+def plot_bone(ax, data, joint1, joint2, time, color):
+    ax.plot(xs = [data[joint1][time][0], data[joint2][time][0]], 
+            ys = [data[joint1][time][1], data[joint2][time][1]],
+            zs = [data[joint1][time][2], data[joint2][time][2]], c = color)
+    
+
+""" Plot whole skeleton (without head) on a specific time and save png image in plot_img folder"""
+def plot_skeleton(data, time):
+    fig, ax = plt.subplots(subplot_kw={'projection': '3d'}, figsize=(6,6))
+    ax.set_xlim3d(2000, 4000)
+    ax.set_ylim3d(-2000, 3000)
+    ax.set_zlim3d(-1500, 500)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    cmap = plt.cm.get_cmap('cool')
+    colors = []
+    for i in range(12): 
+        colors.append(cmap(i*25))
+        
+    plot_bone(ax, data, 'point_15', 'point_13', time, colors[0])
+    plot_bone(ax, data, 'lefthip', 'point_13', time, colors[1])
+    plot_bone(ax, data, 'point_16', 'point_14', time, colors[2])
+    plot_bone(ax, data, 'righthip', 'point_14', time, colors[3])
+    plot_bone(ax, data, 'lefthip', 'righthip', time, colors[4])
+    plot_bone(ax, data, 'rightshoulder', 'righthip', time, colors[5])
+    plot_bone(ax, data, 'lefthip', 'leftshoulder', time, colors[6])
+    plot_bone(ax, data, 'rightshoulder', 'leftshoulder', time, colors[7])
+    plot_bone(ax, data, 'rightshoulder', 'rightelbow', time, colors[8])
+    plot_bone(ax, data, 'rightwrist', 'rightelbow', time, colors[9])
+    plot_bone(ax, data, 'leftelbow', 'leftshoulder', time, colors[10])
+    plot_bone(ax, data, 'leftelbow', 'leftwrist', time, colors[10])
+
+    fig.tight_layout()
+    output_path = f'plot_img/kde_{time}.png'
+    plt.savefig(output_path)
+    plt.cla() # needed to remove the plot because savefig doesn't clear it
+
+""" Create img plots on a period of time"""
+def skeleton_frames(data, t1, t2):
+    for t in range(t1, t2+1):
+        plot_skeleton(data, t)
+
+""" Create video from plot_img folder to file_name video"""
+def video_skeleton(file_name):    
+    fps = 30.0
+    img_array = []
+    for filename in glob.glob('plot_img/*.png'):
+        img = cv2.imread(filename)
+        height, width, layers = img.shape
+        size = (width,height)
+        img_array.append(img)
+    
+    out = cv2.VideoWriter(f'videos/{file_name}.avi',cv2.VideoWriter_fourcc(*'MJPG'), fps, size)
+    
+    for i in range(len(img_array)):
+        out.write(img_array[i])
+    out.release()
+
+""" Empty plot_img folder"""
+def empty_plot_img():
+    removing_files = glob.glob('plot_img/*.png')
+    for i in removing_files:
+        os.remove(i)
 
 
 # --- PLOT FUNCTIONS ---
@@ -220,3 +293,5 @@ def RoM(data, t1, t2, joint, axis = None):
     RoM = max_angle - min_angle
 
     return RoM
+
+

@@ -59,15 +59,15 @@ def plot_bone(ax, data, joint1, joint2, time, color):
     
 
 """ Plot whole skeleton (without head) on a specific time and save png image in plot_img folder"""
-def plot_skeleton(data, time):
-    fig, ax = plt.subplots(subplot_kw={'projection': '3d'}, figsize=(6,6))
+def plot_skeleton(data, time, fig, ax):
+
     ax.set_xlim3d(2000, 4000)
     ax.set_ylim3d(-2000, 3000)
     ax.set_zlim3d(-1500, 500)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-
+    
     cmap = plt.cm.get_cmap('cool')
     colors = []
     for i in range(12): 
@@ -87,21 +87,44 @@ def plot_skeleton(data, time):
     plot_bone(ax, data, 'leftelbow', 'leftwrist', time, colors[10])
 
     fig.tight_layout()
-    output_path = f'plot_img/kde_{time}.png'
+    fig.canvas.draw()
+    img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    img = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    
+    """     output_path = f'plot_img/kde_{time}.png'
     plt.savefig(output_path)
-    plt.cla() # needed to remove the plot because savefig doesn't clear it
+    plt.cla() # needed to remove the plot because savefig doesn't clear it """
+    plt.cla()
+    return img
 
 """ Create img plots on a period of time"""
 def skeleton_frames(data, t1, t2):
+    images = []
     for t in range(t1, t2+1):
-        plot_skeleton(data, t)
+        img = plot_skeleton(data, t)
+        images.append(img)
+
+    return images
 
 """ Create video from plot_img folder to file_name video"""
-def video_skeleton(file_name):    
+def video_skeleton(file_name, data, t1, t2):    
+
+    fig, ax = plt.subplots(subplot_kw={'projection': '3d'}, figsize=(6,6))
+    
     fps = 30.0
-    img_array = []
-    for filename in glob.glob('plot_img/*.png'):
-        img = cv2.imread(filename)
+    """     img_array = []
+    print(sorted(glob.glob('plot_img/*.png'))) """
+    
+    #for filename in sorted(glob.glob('plot_img/*.png')):
+    size = (600,600)
+    out = cv2.VideoWriter(f'videos/{file_name}.avi',cv2.VideoWriter_fourcc(*'MJPG'), fps, size)
+    for t in range(t1, t2+1):
+        img = plot_skeleton(data, t, fig, ax)
+        out.write(img)
+    out.release()
+
+"""     for img in images:
+        img = cv2.imread(file_name)
         height, width, layers = img.shape
         size = (width,height)
         img_array.append(img)
@@ -109,8 +132,8 @@ def video_skeleton(file_name):
     out = cv2.VideoWriter(f'videos/{file_name}.avi',cv2.VideoWriter_fourcc(*'MJPG'), fps, size)
     
     for i in range(len(img_array)):
-        out.write(img_array[i])
-    out.release()
+        out.write(img_array[i]) """
+    #out.release()
 
 """ Empty plot_img folder"""
 def empty_plot_img():
@@ -294,4 +317,211 @@ def RoM(data, t1, t2, joint, axis = None):
 
     return RoM
 
+"""Add joint angles DoF in dataframe"""
+def joint_angles(df):
 
+    # Add middle of the hip as another "joint position"
+    difference = df['lefthip'] - df['righthip']
+    difference = difference/2
+    hips = df['righthip'] + difference
+    df['hips'] = hips
+
+    # Add middle of the shoulders as another "joint position"
+    difference = df['leftshoulder'] - df['rightshoulder']
+    difference = difference/2
+    neck = df['rightshoulder'] + difference
+    df['neck'] = neck
+    # For the left shoulder
+    A = df['rightshoulder'] - df['leftshoulder']
+    B = df['lefthip'] - df['leftshoulder']
+    D = df['leftelbow'] - df['leftshoulder']
+
+    B_u = [unit_vector(b) for b in B]
+    D_u = [unit_vector(d) for d in D]
+    N = [np.cross(a, b) for a, b in zip(A, B)]
+
+    # d projection
+    N2 = [np.cross(n, b) for n, b in zip(N, B)]
+    # finding norm of the vector N2 
+    N2_norm = [np.linalg.norm(n) for n in N2]
+    D_proj = [d - unit_vector((np.dot(d, n)/norm**2)*n) for d, n, norm in zip(D_u, N2, N2_norm)]
+
+    angle = [np.dot(d, b) for d, b in zip(D_proj, B_u)]
+    angle = np.arccos(angle)*180/np.pi
+
+    # To define if it is flexion or extension
+    N_behind = [np.cross(b, a) for a, b in zip(A, B)]
+    for i in range(len(N)):
+        norm_front = np.linalg.norm(D_proj[i] - N[i])
+        norm_behind = np.linalg.norm(D_proj[i] - (N_behind[i]))
+
+        if norm_behind < norm_front:
+            angle[i] = -angle[i]
+
+    df['leftshoulder_flex'] = angle
+
+    # For the right shoulder
+    A = df['rightshoulder'] - df['leftshoulder']
+    B = df['rightshoulder'] - df['righthip']
+    D = df['rightshoulder'] - df['rightelbow']
+
+    B_u = [unit_vector(b) for b in B]
+    D_u = [unit_vector(d) for d in D]
+    N = [np.cross(b, a) for a, b in zip(A, B)]
+
+    # d projection
+    N2 = [np.cross(n, b) for n, b in zip(N, B)]
+    # finding norm of the vector N2 
+    N2_norm = [np.linalg.norm(n) for n in N2]
+    D_proj = [d - unit_vector((np.dot(d, n)/norm**2)*n) for d, n, norm in zip(D_u, N2, N2_norm)]
+
+    angle = [np.dot(d, b) for d, b in zip(D_proj, B_u)]
+    angle = -np.arccos(angle)*180/np.pi
+
+    # To define if it is flexion or extension
+    N_behind = [np.cross(a, b) for a, b in zip(A, B)]
+    for i in range(len(N)):
+        norm_front = np.linalg.norm(D_proj[i] - N[i])
+        norm_behind = np.linalg.norm(D_proj[i] - N_behind[i])
+
+        if norm_behind < norm_front:
+            angle[i] = -angle[i]
+
+    df['rightshoulder_flex'] = angle
+
+    A = df['rightshoulder'] - df['leftshoulder']
+    B = df['lefthip'] - df['leftshoulder']
+    D = df['leftelbow'] - df['leftshoulder']
+
+    A_u = [unit_vector(a) for a in A]
+    B_u = [unit_vector(b) for b in B]
+    D_u = [unit_vector(d) for d in D]
+    N = [np.cross(a, b) for a, b in zip(A, B)]
+
+    # d projection
+    N_norm = [np.linalg.norm(n) for n in N]
+    D_proj = [d - unit_vector((np.dot(d, n)/norm**2)*n) for d, n, norm in zip(D_u, N, N_norm)]
+
+    angle = [np.dot(d, a) for d, a in zip(D_proj, A_u)]
+    angle = np.arccos(angle)*180/np.pi - 90
+
+    B_dotted = df['leftshoulder'] - df['lefthip']
+    A_dotted = df['leftshoulder'] - df['rightshoulder']
+
+    for i in range(len(N)):
+        # To define if the movement is lower or higher than the shoulder, and inner or external of body
+        norm_high = np.linalg.norm(D_proj[i] - B_dotted[i])
+        norm_low = np.linalg.norm(D_proj[i] - B[i])
+        norm_ext = np.linalg.norm(D_proj[i] - A_dotted[i])
+        norm_in = np.linalg.norm(D_proj[i] - A[i])
+
+        if norm_in < norm_ext and norm_low < norm_high:
+            continue
+        elif norm_in > norm_ext and norm_low < norm_high:
+            continue
+        elif norm_in > norm_ext and norm_low > norm_high:
+            angle[i] = 180 - angle[i]
+        elif norm_in < norm_ext and norm_low > norm_high:
+            angle[i] = angle[i] - 90
+
+    df['leftshoulder_abduc'] = angle
+
+    A = df['rightshoulder'] - df['leftshoulder']
+    B = df['rightshoulder'] - df['righthip']
+    D = df['rightshoulder'] - df['rightelbow']
+
+    A_u = [unit_vector(a) for a in A]
+    B_u = [unit_vector(b) for b in B]
+    D_u = [unit_vector(d) for d in D]
+    N = [np.cross(b, a) for a, b in zip(A, B)]
+
+    # d projection
+    N_norm = [np.linalg.norm(n) for n in N]
+    D_proj = [d - unit_vector((np.dot(d, n)/norm**2)*n) for d, n, norm in zip(D_u, N, N_norm)]
+
+    angle = [np.dot(d, a) for d, a in zip(D_proj, A_u)]
+    angle = np.arccos(angle)*180/np.pi - 90
+
+    B_dotted = df['righthip'] - df['rightshoulder']
+    A_dotted = df['rightshoulder'] - df['leftshoulder']
+
+    for i in range(len(N)):
+        # To define if the movement is lower or higher than the shoulder, and inner or external of body
+        norm_high = np.linalg.norm(D_proj[i] - B_dotted[i])
+        norm_low = np.linalg.norm(D_proj[i] - B[i])
+        norm_ext = np.linalg.norm(D_proj[i] - A_dotted[i])
+        norm_in = np.linalg.norm(D_proj[i] - A[i])
+
+        if norm_in < norm_ext and norm_low < norm_high:
+            continue
+        elif norm_in > norm_ext and norm_low < norm_high:
+            continue
+        elif norm_in > norm_ext and norm_low > norm_high:
+            angle[i] = 180 - angle[i]
+        elif norm_in < norm_ext and norm_low > norm_high:
+            angle[i] = angle[i] - 90
+
+    df['rightshoulder_abduc'] = angle
+
+    A = df['leftshoulder'] - df['leftelbow']
+    B = df['leftwrist'] - df['leftelbow']
+
+    angle = [np.dot(unit_vector(a), unit_vector(b)) for a, b in zip(A, B)]
+    angle = np.arccos(angle)*180/np.pi
+
+    df['leftelbow_flex'] = angle
+
+    A = df['rightelbow'] - df['rightshoulder']
+    B = df['rightelbow'] - df['rightwrist']
+
+    angle = [np.dot(unit_vector(a), unit_vector(b)) for a, b in zip(A, B)]
+    angle = np.arccos(angle)*180/np.pi
+
+    df['rightelbow_flex'] = angle
+
+    A = df['rightshoulder'] - df['hips']
+    B = df['leftshoulder'] - df['hips']
+    N = [np.cross(a, b) for a, b in zip(A, B)]
+    v_z = np.array([0, 0, 1])
+
+    V1_u = [unit_vector(n) for n in N]
+    DOT = [np.dot(v1_u, v_z) for v1_u in V1_u]
+    angle = 90 - np.arccos(DOT)*180/np.pi
+
+    df['trunk_forward_flex'] = angle
+
+    A = df['righthip'] - df['hips']
+    B = df['neck'] - df['hips']
+
+    A_u = [unit_vector(a) for a in A]
+    B_u = [unit_vector(b) for b in B]
+    DOT = [np.dot(a_u, b_u) for a_u, b_u in zip(A_u, B_u)]
+    angle = np.arccos(DOT)*180/np.pi - 90
+
+    df['trunk_lateral_flex'] = angle
+
+    A = df['righthip'] - df['hips']
+    B = df['neck'] - df['hips']
+    C = df['rightshoulder'] - df['neck']
+    N = [np.cross(b, a) for a, b in zip(A, B)]
+
+    N2 = [np.cross(a, n) for a, n in zip(A, N)]
+    N2_norm = [np.linalg.norm(n2) for n2 in N2]
+
+    C_proj = [c - (np.dot(c, n2)/norm2**2)*n2 for c, n2, norm2 in zip(C, N2, N2_norm)]
+
+    A_u = [unit_vector(a) for a in A]
+    C_proj = [unit_vector(c) for c in C_proj]
+    DOT = [np.dot(a_u, c) for a_u, c in zip(A_u, C_proj)]
+    angle = np.arccos(DOT)*180/np.pi
+
+    # To define if it is right or left rotation 
+    N_behind = [np.cross(a, b) for a, b in zip(A, B)]
+    for i in range(len(N)):
+        norm_front = np.linalg.norm(C_proj[i] - N[i])
+        norm_behind = np.linalg.norm(C_proj[i] - N_behind[i])
+
+        if norm_behind < norm_front:
+            angle[i] = -angle[i]
+
+    df['trunk_rotation'] = angle

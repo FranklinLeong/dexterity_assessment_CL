@@ -112,10 +112,6 @@ def video_skeleton(file_name, data, t1, t2):
     fig, ax = plt.subplots(subplot_kw={'projection': '3d'}, figsize=(6,6))
     
     fps = 30.0
-    """     img_array = []
-    print(sorted(glob.glob('plot_img/*.png'))) """
-    
-    #for filename in sorted(glob.glob('plot_img/*.png')):
     size = (600,600)
     out = cv2.VideoWriter(f'videos/{file_name}.avi',cv2.VideoWriter_fourcc(*'MJPG'), fps, size)
     for t in range(t1, t2+1):
@@ -145,7 +141,7 @@ def empty_plot_img():
 # --- PLOT FUNCTIONS ---
 
 """ Plot joint angles around 3 axis during a period of an event"""
-def plot_angles(data, t1, t2, joint_name, event, x_vertical1 = None, x_vertical2 = None, label_vertical1=None, label_vertical2=None, vertical_line1 = False, vertical_line2 = False):
+""" def plot_angles(data, t1, t2, joint_name, event, x_vertical1 = None, x_vertical2 = None, label_vertical1=None, label_vertical2=None, vertical_line1 = False, vertical_line2 = False):
     idx = time_id(data, t1, t2)
     angles_x = [point[0] for point in data[joint_name][idx[0]:idx[1]]]
     angles_y = [point[1] for point in data[joint_name][idx[0]:idx[1]]]
@@ -185,7 +181,7 @@ def plot_angles(data, t1, t2, joint_name, event, x_vertical1 = None, x_vertical2
     plt.xlabel('Time [s]')
     plt.ylabel('Angle [deg]')
     plt.legend()
-    plt.show()
+    plt.show() """
 
 """ Plots all average joint velocities given a period of time in an event. """
 def plot_joint_velocities(data, t1, t2, event, with_error = False):
@@ -208,6 +204,47 @@ def plot_joint_velocities(data, t1, t2, event, with_error = False):
     plt.ylabel('Average joint velocities [deg/s]')
     plt.legend()
     plt.show()
+
+"""Plot one joint during a period of time"""
+def plot_joint(df, t1, t2, joint_l, joint_r, title, trunk = False):
+    t1, t2 = time_id(df, t1, t2)
+    x = df['time'][t1:t2]
+    if trunk == True:
+        plt.plot(x, df[joint_l][t1:t2])
+    else:
+        plt.plot(x, df[joint_l][t1:t2], label = 'Left')
+        plt.plot(x, df[joint_r][t1:t2], label = 'Right')
+        plt.legend()
+    plt.ylabel('Degree [°]')
+    plt.xlabel('Time [s]')
+    plt.title(title)
+
+"""Plot all joints during a period of time"""
+def plot_all_joints(data, t1, t2, title):
+    t1, t2 = time_id(data, t1, t2)
+    fig = plt.figure(figsize=(12, 6))
+    x = data['time'][t1:t2]
+    fig.suptitle(title)
+
+    plt.subplot(2, 3, 1)
+    plot_joint(data, t1, t2, 'leftelbow_flex', 'rightelbow_flex', 'Elbow flexion')
+
+    plt.subplot(2, 3, 2)
+    plot_joint(data, t1, t2, 'leftshoulder_flex', 'rightshoulder_flex', 'Shoulder flexion')
+
+    plt.subplot(2, 3, 3)
+    plot_joint(data, t1, t2, 'leftshoulder_abduc', 'rightshoulder_abduc', 'Shoulder abduction')
+
+    plt.subplot(2, 3, 4)
+    plot_joint(data, t1, t2, 'trunk_forward_flex', '', title = 'Trunk forward flexion', trunk=True)
+
+    plt.subplot(2, 3, 5)
+    plot_joint(data, t1, t2, 'trunk_lateral_flex', '', title = 'Trunk lateral flexion', trunk=True)
+
+    plt.subplot(2, 3, 6)
+    plot_joint(data, t1, t2, 'trunk_rotation', '', title = 'Trunk transverse rotation', trunk=True)
+
+    plt.tight_layout()
 
 # --- INTERMEDIARY FEATURES ---
 

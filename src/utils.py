@@ -64,19 +64,24 @@ def plot_skeleton(data, time, fig, ax):
     ax.set_xlim3d(2, 4)
     ax.set_ylim3d(-2, 3)
     ax.set_zlim3d(-1.5, 0.5)
+    ax.view_init(azim=90)
+    """ ax.set_xlim(-2, 1)
+    ax.set_ylim(-2, 2)
+    ax.set_zlim(-2, 1) """
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
+    #ax.view_init(vertical_axis='x', roll = -180, azim = 45)
 
     cmap = plt.cm.get_cmap('cool')
     colors = []
     for i in range(12): 
         colors.append(cmap(i*25))
         
-    plot_bone(ax, data, 'point_15', 'point_13', time, colors[0])
-    plot_bone(ax, data, 'lefthip', 'point_13', time, colors[1])
-    plot_bone(ax, data, 'point_16', 'point_14', time, colors[2])
-    plot_bone(ax, data, 'righthip', 'point_14', time, colors[3])
+    plot_bone(ax, data, 'leftfoot', 'leftknee', time, colors[0])
+    plot_bone(ax, data, 'lefthip', 'leftknee', time, colors[1])
+    plot_bone(ax, data, 'rightfoot', 'rightknee', time, colors[2])
+    plot_bone(ax, data, 'righthip', 'rightknee', time, colors[3])
     plot_bone(ax, data, 'lefthip', 'righthip', time, colors[4])
     plot_bone(ax, data, 'rightshoulder', 'righthip', time, colors[5])
     plot_bone(ax, data, 'lefthip', 'leftshoulder', time, colors[6])
@@ -98,17 +103,17 @@ def plot_skeleton(data, time, fig, ax):
     return img
 
 """ Create img plots on a period of time"""
-def skeleton_frames(data, t1, t2):
+""" def skeleton_frames(data, t1, t2):
     images = []
     for t in range(t1, t2+1):
         img = plot_skeleton(data, t)
         images.append(img)
 
-    return images
+    return images """
 
 """ Create video from plot_img folder to file_name video"""
 def video_skeleton(file_name, data, t1, t2):    
-
+    t1, t2 = time_id(data, t1, t2)
     fig, ax = plt.subplots(subplot_kw={'projection': '3d'}, figsize=(6,6))
     
     fps = 30.0
@@ -118,18 +123,6 @@ def video_skeleton(file_name, data, t1, t2):
         img = plot_skeleton(data, t, fig, ax)
         out.write(img)
     out.release()
-
-"""     for img in images:
-        img = cv2.imread(file_name)
-        height, width, layers = img.shape
-        size = (width,height)
-        img_array.append(img)
-    
-    out = cv2.VideoWriter(f'videos/{file_name}.avi',cv2.VideoWriter_fourcc(*'MJPG'), fps, size)
-    
-    for i in range(len(img_array)):
-        out.write(img_array[i]) """
-    #out.release()
 
 """ Empty plot_img folder"""
 def empty_plot_img():
@@ -207,7 +200,6 @@ def plot_joint_velocities(data, t1, t2, event, with_error = False):
 
 """Plot one joint during a period of time"""
 def plot_joint(df, t1, t2, joint_l, joint_r, title, trunk = False):
-    t1, t2 = time_id(df, t1, t2)
     x = df['time'][t1:t2]
     if trunk == True:
         plt.plot(x, df[joint_l][t1:t2])
@@ -223,7 +215,6 @@ def plot_joint(df, t1, t2, joint_l, joint_r, title, trunk = False):
 def plot_all_joints(data, t1, t2, title):
     t1, t2 = time_id(data, t1, t2)
     fig = plt.figure(figsize=(12, 6))
-    x = data['time'][t1:t2]
     fig.suptitle(title)
 
     plt.subplot(2, 3, 1)
@@ -320,6 +311,25 @@ def dist_trajectory(data, t1, t2, joint_name):
 
     return dist_trajectory
 
+""" Returns reach distance of left or right wrist"""
+def reach_dist(data, t1, t2, left=False, right=False):
+    t1, t2 = time_id(data, t1, t2)
+    if left:
+        points = data['leftwrist'][t1:t2]
+    if right:
+        points = data['rightwrist'][t1:t2]
+
+    dist_trajectory = 0
+    n = len(points)
+    for i in range(n-1):
+        a = points[i + t1]
+        b = points[i+1 + t1]
+        distance = np.linalg.norm(b-a)
+        dist_trajectory = dist_trajectory + distance    
+    
+    return dist_trajectory
+    
+
 
 """Returns the exact time.. ?"""
 def time_trajectory(data, t1, t2): 
@@ -355,19 +365,20 @@ def RoM(data, t1, t2, joint, axis = None):
     return RoM
 
 """Add joint angles DoF in dataframe"""
-def joint_angles(df):
+def add_joint_angles(df):
 
     # Add middle of the hip as another "joint position"
-    difference = df['lefthip'] - df['righthip']
-    difference = difference/2
+    difference = (df['lefthip'] - df['righthip'])/2
+    #hips = (df['lefthip'] + df['righthip'])/2
     hips = df['righthip'] + difference
     df['hips'] = hips
 
     # Add middle of the shoulders as another "joint position"
-    difference = df['leftshoulder'] - df['rightshoulder']
-    difference = difference/2
+    difference = (df['leftshoulder'] - df['rightshoulder'])/2
+    #neck = (df['leftshoulder'] + df['rightshoulder'])/2
     neck = df['rightshoulder'] + difference
     df['neck'] = neck
+
     # For the left shoulder
     A = df['rightshoulder'] - df['leftshoulder']
     B = df['lefthip'] - df['leftshoulder']
@@ -398,22 +409,22 @@ def joint_angles(df):
     df['leftshoulder_flex'] = angle
 
     # For the right shoulder
-    A = df['rightshoulder'] - df['leftshoulder']
-    B = df['rightshoulder'] - df['righthip']
-    D = df['rightshoulder'] - df['rightelbow']
+    A = df['leftshoulder'] - df['rightshoulder']
+    B = df['righthip'] - df['rightshoulder']
+    D = df['rightelbow'] - df['rightshoulder']
 
     B_u = [unit_vector(b) for b in B]
     D_u = [unit_vector(d) for d in D]
     N = [np.cross(b, a) for a, b in zip(A, B)]
 
     # d projection
-    N2 = [np.cross(n, b) for n, b in zip(N, B)]
+    N2 = [np.cross(b, n) for n, b in zip(N, B)]
     # finding norm of the vector N2 
     N2_norm = [np.linalg.norm(n) for n in N2]
     D_proj = [d - unit_vector((np.dot(d, n)/norm**2)*n) for d, n, norm in zip(D_u, N2, N2_norm)]
 
     angle = [np.dot(d, b) for d, b in zip(D_proj, B_u)]
-    angle = -np.arccos(angle)*180/np.pi
+    angle = np.arccos(angle)*180/np.pi
 
     # To define if it is flexion or extension
     N_behind = [np.cross(a, b) for a, b in zip(A, B)]
@@ -438,8 +449,9 @@ def joint_angles(df):
     # d projection
     N_norm = [np.linalg.norm(n) for n in N]
     D_proj = [d - unit_vector((np.dot(d, n)/norm**2)*n) for d, n, norm in zip(D_u, N, N_norm)]
-
-    angle = [np.dot(d, a) for d, a in zip(D_proj, A_u)]
+    angle = [np.dot(d, b) for d, b in zip(D_proj, B_u)]
+    angle = np.arccos(angle)*180/np.pi
+    """     angle = [np.dot(d, a) for d, a in zip(D_proj, A_u)]
     angle = np.arccos(angle)*180/np.pi - 90
 
     B_dotted = df['leftshoulder'] - df['lefthip']
@@ -459,13 +471,13 @@ def joint_angles(df):
         elif norm_in > norm_ext and norm_low > norm_high:
             angle[i] = 180 - angle[i]
         elif norm_in < norm_ext and norm_low > norm_high:
-            angle[i] = angle[i] - 90
+            angle[i] = angle[i] - 90 """
 
     df['leftshoulder_abduc'] = angle
 
-    A = df['rightshoulder'] - df['leftshoulder']
-    B = df['rightshoulder'] - df['righthip']
-    D = df['rightshoulder'] - df['rightelbow']
+    A = df['leftshoulder'] - df['rightshoulder']
+    B = df['righthip'] - df['rightshoulder'] 
+    D = df['rightelbow'] - df['rightshoulder']
 
     A_u = [unit_vector(a) for a in A]
     B_u = [unit_vector(b) for b in B]
@@ -475,8 +487,9 @@ def joint_angles(df):
     # d projection
     N_norm = [np.linalg.norm(n) for n in N]
     D_proj = [d - unit_vector((np.dot(d, n)/norm**2)*n) for d, n, norm in zip(D_u, N, N_norm)]
-
-    angle = [np.dot(d, a) for d, a in zip(D_proj, A_u)]
+    angle = [np.dot(d, b) for d, b in zip(D_proj, B_u)]
+    angle = np.arccos(angle)*180/np.pi
+    """ angle = [np.dot(d, a) for d, a in zip(D_proj, A_u)]
     angle = np.arccos(angle)*180/np.pi - 90
 
     B_dotted = df['righthip'] - df['rightshoulder']
@@ -496,7 +509,7 @@ def joint_angles(df):
         elif norm_in > norm_ext and norm_low > norm_high:
             angle[i] = 180 - angle[i]
         elif norm_in < norm_ext and norm_low > norm_high:
-            angle[i] = angle[i] - 90
+            angle[i] = angle[i] - 90 """
 
     df['rightshoulder_abduc'] = angle
 
@@ -562,3 +575,16 @@ def joint_angles(df):
             angle[i] = -angle[i]
 
     df['trunk_rotation'] = angle
+
+
+""" Add joint velocities of joints of interest to dataframe"""
+def add_joint_velocities(df, joints):
+    times = df['time']
+    n = len(times)
+    for joint in joints:
+        angles = df[joint]
+        w = [0]
+        for i in range(n-1):
+            w_i = (angles[i+1] - angles[i])/(times[i+1] - times[i])
+            w.append(w_i)
+        df[joint + '_w'] = w

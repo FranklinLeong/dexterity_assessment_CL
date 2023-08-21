@@ -64,7 +64,7 @@ def plot_skeleton(data, time, fig, ax):
     """ ax.set_xlim3d(2, 4)
     ax.set_ylim3d(-2, 3)
     ax.set_zlim3d(-1.5, 0.5) """
-    #ax.view_init()
+    ax.view_init(azim=45)
 
     ax.set_xlim(-4, 2)
     ax.set_ylim(-10, 2)

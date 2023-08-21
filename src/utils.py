@@ -79,7 +79,8 @@ def plot_skeleton(data, time, fig, ax):
     for i in range(12): 
         colors.append(cmap(i*25))
         
-    plot_bone(ax, data, 'leftfoot', 'leftknee', time, colors[0])
+    
+    plot_bone(ax, data, 'leftfoot', 'leftknee', time, colors[11])
     plot_bone(ax, data, 'lefthip', 'leftknee', time, colors[1])
     plot_bone(ax, data, 'rightfoot', 'rightknee', time, colors[2])
     plot_bone(ax, data, 'righthip', 'rightknee', time, colors[3])
@@ -90,7 +91,7 @@ def plot_skeleton(data, time, fig, ax):
     plot_bone(ax, data, 'rightshoulder', 'rightelbow', time, colors[8])
     plot_bone(ax, data, 'rightwrist', 'rightelbow', time, colors[9])
     plot_bone(ax, data, 'leftelbow', 'leftshoulder', time, colors[10])
-    plot_bone(ax, data, 'leftelbow', 'leftwrist', time, colors[10])
+    plot_bone(ax, data, 'leftelbow', 'leftwrist', time, colors[0])
 
     fig.tight_layout()
     fig.canvas.draw()

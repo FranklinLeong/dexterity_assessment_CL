@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import glob
 import cv2
 import os
+from skspatial.objects import Plane, Points
 
 '''Pipeline and helper functions'''
 
@@ -48,6 +49,63 @@ def time_id(data, t1, t2, col_name = 'time'):
     closest_index_2 = (data[col_name] - t2).abs().idxmin()
     return [closest_index_1, closest_index_2]
 
+"""Gram-Schmidt orthogonalization algorithm, basis vectors are given as rows of vectors"""
+
+def gram_schmidt(vectors):
+    num_vectors, vector_length = vectors.shape
+    orthogonalized = np.zeros((num_vectors, vector_length))
+    for i in range(num_vectors):
+        orthogonalized[i] = vectors[i]
+        for j in range(i):
+            orthogonalized[i] -= np.dot(vectors[i], orthogonalized[j]) / np.dot(orthogonalized[j], orthogonalized[j]) * orthogonalized[j]
+        orthogonalized[i] /= np.linalg.norm(orthogonalized[i])
+    return orthogonalized
+
+"""Transform original coordinates to new coordinate system based on basis_vectors and center"""
+def transform_to_new_coordinates(original_coordinates, basis_vectors, center):
+    translated_coords = original_coordinates - center
+    transformation_matrix = np.column_stack(basis_vectors) 
+    new_coordinates = np.dot(transformation_matrix, translated_coords)
+    return new_coordinates
+
+"""Transform original coordinates to body frame coordinates"""
+def transform_points(data):
+    feet_points = np.concatenate((data['leftfoot'], data['rightfoot']))
+    feet_points = [a for a in feet_points]
+
+    points = Points(feet_points)
+    plane = Plane.best_fit(points)
+    
+    middle_feet = (data['leftfoot'] + data['rightfoot'])/2
+    middle_feet = np.array([plane.project_point(a) for a in middle_feet])
+    leftfoot = np.array([np.array(a) for a in data['leftfoot']])
+    hips = np.array([np.array(a) for a in data['hips']])
+    X = leftfoot - middle_feet 
+    Z = hips - middle_feet
+    X = [plane.project_vector(x) for x in X]
+    C = middle_feet
+
+    #Axis of coordinate system should be unit vector
+    X = [np.array(x) for x in X]
+    Z = [np.array(z) for z in Z]
+    Y = np.cross(X, Z)
+    
+    #Orthogonalization of these 3 axises using Gram-Schmidt process
+    A = [np.array([x, y, z]) for x, y, z in zip(X, Y, Z)]
+    #A = [np.array([x, y, Z]) for x, y in zip(X, Y)]
+    R = [gram_schmidt(a) for a in A]
+    
+    #body joints transformed to body frame coordinates
+    new_df = pd.DataFrame()
+    keys = ['nose', 'lefteye', 'righteye', 'leftear', 'rightear',
+            'leftshoulder', 'rightshoulder', 'leftelbow', 'rightelbow',
+            'leftwrist', 'rightwrist', 'lefthip', 'righthip', 'leftknee',
+            'rightknee', 'leftfoot', 'rightfoot', 'neck', 'hips']
+    for key in keys:
+        new_df[key] = [transform_to_new_coordinates(point, r, c) for point, r, c in zip(data[key], R, C)]
+    new_df['time'] = data['time']
+    return new_df
+
 
 # --- MAKE VIDEOS FUNCTIONS ---
 
@@ -79,7 +137,15 @@ def plot_skeleton(data, time, fig, ax):
     for i in range(12): 
         colors.append(cmap(i*25))
         
-    
+    bones = {'leftforearm' : ['leftelbow', 'leftwrist'],
+             'rightforearm' : ['rightelbow', 'rightwrist'],
+             'leftarm' : ['leftshoulder', 'leftelbow'],
+             'rightarm' : ['rightshoulder', 'rightelbow'],
+             'shoulders' : ['leftshoulder', 'rightshoulder'],
+             'righttrunk' : ['righthip', 'rightshoulder'],
+             'lefttrunk' : ['lefthip', 'leftshoulder'], 
+             'hips' : ['righthip', 'lefthip'], 
+             }
     plot_bone(ax, data, 'leftfoot', 'leftknee', time, colors[11])
     plot_bone(ax, data, 'lefthip', 'leftknee', time, colors[1])
     plot_bone(ax, data, 'rightfoot', 'rightknee', time, colors[2])
@@ -249,13 +315,86 @@ def unit_vector(vector):
 def add_naive_joint_angles(data, parent_joint, joint, child_joint):
     v1 = data[parent_joint] - data[joint]
     v2 = data[child_joint] - data[joint]
-    angles = []
+    """ angles = []
     for v1_u, v2_u in zip(v1, v2):
         v1_u = unit_vector(v1_u)
         v2_u = unit_vector(v2_u)
         angle = np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0)) * 180 / np.pi
-        angles.append(angle)
-    data[joint+'_angle'] = angles
+        angles.append(angle) 
+        data[joint+'_angle'] = angles"""
+    angles = [np.dot(unit_vector(a), unit_vector(b)) for a, b in zip(A, B)]
+    data[joint+'_angle'] = np.arccos(angles)*180/np.pi
+
+"""Attempt to return angle of a joint projected on a body plane"""
+def angle_plane(data, jointA=None, jointB=None, plane='sagittal', trunk = False):
+    if jointA and jointB:
+        D = data[jointB] - data[jointA]
+        D = [unit_vector(d) for d in D]
+    
+    if plane == 'sagittal':
+        N = np.array([0, 0, 1])
+        
+        if trunk :
+            A = data['rightshoulder'] - data['hips']
+            B = data['leftshoulder'] - data['hips']
+            D = [np.cross(a, b) for a, b in zip(A, B)]
+            D = [unit_vector(d) for d in D]
+            angle = [np.dot(d, N) for d in D]
+            angle = 90 - np.arccos(angle)*180/np.pi
+
+        else:
+            D = [np.array([0, d[1], d[2]]) for d in D]
+            angle = [np.dot(d, N) for d in D]
+            angle = np.arccos(angle)*180/np.pi
+
+            # To define if it is flexion or extension
+            for i in range(len(D)):
+                norm_front = np.linalg.norm(D[i] - np.array([0, -1, 0]))
+                norm_behind = np.linalg.norm(D[i] - np.array([0, 1, 0]))
+
+                if norm_behind < norm_front:
+                    angle[i] = -angle[i]
+
+    elif plane == 'transverse':
+        N = np.array([-1, 0, 0])
+        D = [np.array([d[0], d[1], 0]) for d in D]
+        angle = [np.dot(d, N) for d in D]
+        angle = np.arccos(angle)*180/np.pi - 90
+
+        if trunk:
+            angle = angle + 90
+
+        for i in range(len(D)):
+            if 'left' in jointA:
+                angle[i] = -angle[i]
+
+    elif plane =='coronal':
+        if trunk:
+            A = data['righthip'] - data['hips']
+            B = data['neck'] - data['hips']
+
+            A_u = [unit_vector(a) for a in A]
+            B_u = [unit_vector(b) for b in B]
+            DOT = [np.dot(a_u, b_u) for a_u, b_u in zip(A_u, B_u)]
+            angle = np.arccos(DOT)*180/np.pi - 90
+        else : 
+            N = np.array([0, 0, 1])
+            D = [np.array([d[0], 0, d[2]]) for d in D]
+            angle = [np.dot(d, N) for d in D]
+            #angle = [np.arctan2(np.cross(N, d), np.dot(N, d)) for d in D]
+            angle = np.arccos(angle)*180/np.pi 
+            # To define if it is on one side or the other
+            for i in range(len(D)):
+                norm_left = np.linalg.norm(D[i] - np.array([-2, 0, 0]))
+                norm_right = np.linalg.norm(D[i] - np.array([2, 0, 0]))
+                
+                if 'left' in jointA and norm_right < norm_left and not (angle[i] > 150):
+                    angle[i] = -angle[i]
+
+                if 'right' in jointA and norm_right > norm_left and not (angle[i] > 150):
+                    angle[i] = -angle[i]
+
+    return angle
 
 """ Returns mean angular velocity of angular velocities at each timestep
 data = angles of joint of interest, t1 and t2 are expressed in seconds. """
@@ -296,6 +435,56 @@ def angle_velocity2(data, t1, t2, name = 'leftelbow_angles'):
     std = np.std(w)
 
     return (velocity, std)
+
+"""Add positions and angular velocities and accelerations in data"""
+def add_velocities_acceleration(data, keys, joints) : 
+    times = data['time']
+    n = len(data) - 1
+    for key in keys:
+        velocities = [0]
+        for i in range(n):
+            a = data[key][i]
+            b = data[key][i+1]
+            dist = np.linalg.norm(b-a)
+            w = dist/(times[i+1] - times[i])
+            velocities.append(w)
+        data[key +'_w'] = velocities
+
+    for joint in joints:
+        velocities = [0]
+        for i in range(n):
+            a = data[joint][i]
+            b = data[joint][i+1]
+            dist = np.linalg.norm(b-a)
+            w = dist/(times[i+1] - times[i])
+            velocities.append(w)
+        data[joint +'_w'] = velocities
+
+    for key in keys:
+        accelerations = [0,0]
+        w = data[key+'_w']
+        for i in range(n-1):
+            a_i = (w[i+1] - w[i])/(times[i+1] - times[i])
+            accelerations.append(a_i)
+        data[key+'_a'] = accelerations
+
+    for joint in joints:
+        accelerations = [0,0]
+        w = data[joint+'_w']
+        for i in range(n-1):
+            a_i = (w[i+1] - w[i])/(times[i+1] - times[i])
+            accelerations.append(a_i)
+
+        data[joint+'_a'] = accelerations
+
+""" Add centroid of set of joints to data"""
+def add_centroid(data, joints, name):
+    sum = 0
+    for joint in joints:
+        sum = sum + data[joint]
+
+    centroid = sum/len(joints)
+    data[name] = centroid
 
 """ Returns the distance of the total trajectory of one joint given a period of time"""
 def dist_trajectory(data, t1, t2, joint_name):

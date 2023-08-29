@@ -442,13 +442,25 @@ def add_velocities_acceleration(data, keys, joints) :
     n = len(data) - 1
     for key in keys:
         velocities = [0]
+        V_x = [0]
+        V_y = [0]
+        V_z = [0]
         for i in range(n):
+            dt = (times[i+1] - times[i])
             a = data[key][i]
             b = data[key][i+1]
             dist = np.linalg.norm(b-a)
-            w = dist/(times[i+1] - times[i])
+            w = dist/dt
+            v_x, v_y, v_z = (b-a)/dt
             velocities.append(w)
-        data[key +'_w'] = velocities
+            V_x.append(v_x)
+            V_y.append(v_y)
+            V_z.append(v_z)
+        data[key +'_V'] = velocities
+        add_filtered(data, key+'_V')
+        data[key +'_Vx'] = V_x
+        data[key +'_Vy'] = V_y
+        data[key +'_Vz'] = V_z
 
     for joint in joints:
         velocities = [0]
@@ -458,24 +470,43 @@ def add_velocities_acceleration(data, keys, joints) :
             dist = np.linalg.norm(b-a)
             w = dist/(times[i+1] - times[i])
             velocities.append(w)
-        data[joint +'_w'] = velocities
+        data[joint +'_V'] = velocities
+        add_filtered(data, joint+'_V')
 
     for key in keys:
         accelerations = [0,0]
-        w = data[key+'_w']
+        A_x = [0,0]
+        A_y = [0,0]
+        A_z = [0,0]
+        w = data[key+'_V']
+        V_x = data[key+'_Vx']
+        V_y = data[key+'_Vy']
+        V_z = data[key+'_Vz']
         for i in range(n-1):
-            a_i = (w[i+1] - w[i])/(times[i+1] - times[i])
+            dt = times[i+1] - times[i]
+            a_i = (w[i+1] - w[i])/dt
+            a_x = (V_x[i+1] - V_x[i])/dt
+            a_y = (V_y[i+1] - V_y[i])/dt
+            a_z = (V_z[i+1] - V_z[i])/dt
             accelerations.append(a_i)
-        data[key+'_a'] = accelerations
+            A_x.append(a_x)
+            A_y.append(a_y)
+            A_z.append(a_z)
+        data[key+'_A'] = accelerations
+        add_filtered(data, key+'_A')
+        data[key+'_Ax'] = A_x
+        data[key+'_Ay'] = A_y
+        data[key+'_Az'] = A_z
 
     for joint in joints:
         accelerations = [0,0]
-        w = data[joint+'_w']
+        w = data[joint+'_V']
         for i in range(n-1):
             a_i = (w[i+1] - w[i])/(times[i+1] - times[i])
             accelerations.append(a_i)
 
-        data[joint+'_a'] = accelerations
+        data[joint+'_A'] = accelerations
+        add_filtered(data, joint+'_A')
 
 """ Add centroid of set of joints to data"""
 def add_centroid(data, joints, name):
@@ -485,6 +516,17 @@ def add_centroid(data, joints, name):
 
     centroid = sum/len(joints)
     data[name] = centroid
+
+"""Filter column of data, denominated by keys, using simple moving average"""
+def add_filtered(data, key, window_size = 7):
+    data[key+'_filtered'] = data[key].rolling(window_size).mean().fillna(0)
+
+"""Add to dataset the 3 components of body points separately as new variables"""
+def add_each_components(data, keys):
+    for key in keys:
+        data[key+'_x'] = [x for x, y, z in data[key]]
+        data[key+'_y'] = [y for x, y, z in data[key]]
+        data[key+'_z'] = [z for x, y, z in data[key]]
 
 """ Returns the distance of the total trajectory of one joint given a period of time"""
 def dist_trajectory(data, t1, t2, joint_name):

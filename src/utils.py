@@ -70,7 +70,7 @@ def transform_to_new_coordinates(original_coordinates, basis_vectors, center):
 
 """Transform original coordinates to body frame coordinates"""
 def transform_points(data):
-    feet_points = np.concatenate((data['leftfoot'], data['rightfoot']))
+    feet_points = np.concatenate((data['leftfoot'][::3], data['rightfoot'][::3]))
     feet_points = [a for a in feet_points]
 
     points = Points(feet_points)
@@ -322,7 +322,7 @@ def add_naive_joint_angles(data, parent_joint, joint, child_joint):
         angle = np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0)) * 180 / np.pi
         angles.append(angle) 
         data[joint+'_angle'] = angles"""
-    angles = [np.dot(unit_vector(a), unit_vector(b)) for a, b in zip(A, B)]
+    angles = [np.dot(unit_vector(a), unit_vector(b)) for a, b in zip(v1, v2)]
     data[joint+'_angle'] = np.arccos(angles)*180/np.pi
 
 """Attempt to return angle of a joint projected on a body plane"""

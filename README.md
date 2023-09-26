@@ -46,30 +46,30 @@ One could also expand the feature engineering, such as adding some tertiary feat
 ## Project organization
 This project is organized as follows :
 
-- the repository **data** that includes :
-    - **data_test_31.07.npy**, small a dataset used for primary features validation
-    - the repository **ESK_data** that contains :
-        - **body_kpts_{id}.npy** the generated 3D body points of each participants
-        - **{id}.npy** The labelled events throughout the session of each participant
-    - the repository **features** that contains :
-        - **primary_features_amputees.pkl** that contains the primary features of amputees participants
-        - **primary_features_healthy.pkl** that contains the primary features of able_bodies participants
-        - **primary_features_{id}.pkl** that contains the primary features of a participant
-        - **secondary_features_amputees.pkl** that contains the secondary features of amputees participants
-        - **secondary_features_healthy.pkl** that contains the secondary features of healthy participants
-        - **secondary_features_{id}.pkl** that contains the secondary features of a participant
-    - the repository **figures** that contains a few figures for statistical comparison between amputees and able-bodied people, and also : 
-        - the repository **mean** that contains the plot of the means of each primary features of each participant
-        - the repository **ROM** that contains the plot of the ROMs of each primary features of each participant
-        - the repository **std** that contains the plot of the standard deviation of each primary features of each participant
-- the repository **src** that includes : 
-    - **feature.ipynb** that pre-processes the dataset **data_test_31.07.npy** and validate the primary features
-    - **create_features.ipynb** that produces the datasets of the repository **features** 
-    - **stats.ipynb** that produces some plots for statistical comparison, that can be found in repository **figures**
-    - **utils.py** that contains the pipeline, feature engineering and helper functions
-    - the repository **videos** that contains : 
-        - **Boutput0.mp4** which is the video that corresponds to the **data_test_31.07.npy**
-        - And other videos of the skeleton produced for validation by **feature.ipynb**
+- the repository `data` that includes :
+    - `data_test_31.07.npy`, a small dataset used for primary features validation in `src/feature.ipynb`
+    - the repository `ESK_data` that contains :
+        - `body_kpts_{id}.npy` the generated 3D body points of each participants
+        - `{id}.npy` The labelled events throughout the session of each participant
+    - the repository `features` that contains :
+        - `primary_features_amputees.pkl` that contains the primary features of amputees participants
+        - `primary_features_healthy.pkl` that contains the primary features of able_bodies participants
+        - `primary_features_{id}.pkl` that contains the primary features of a participant
+        - `secondary_features_amputees.pkl` that contains the secondary features of amputees participants
+        - `secondary_features_healthy.pkl` that contains the secondary features of healthy participants
+        - `secondary_features_{id}.pkl` that contains the secondary features of a participant
+    - the repository `figures` that contains a few figures for statistical comparison between amputees and able-bodied people, and also : 
+        - the repository `mean` that contains the plot of the means of each primary features of each participant
+        - the repository `RoM` that contains the plot of the ROMs of each primary features of each participant
+        - the repository `std` that contains the plot of the standard deviation of each primary features of each participant
+- the repository `src` that includes : 
+    - `feature.ipynb` that pre-processes the dataset `data_test_31.07.npy` and validate the primary features
+    - `create_features.ipynb` that produces the datasets of the repository `features` 
+    - `stats.ipynb` that produces some plots for statistical comparison, that can be found in repository `figures`
+    - `utils.py` that contains the pipeline, feature engineering and helper functions
+    - the repository `videos` that contains : 
+        - `Boutput0.mp4` which is the video that corresponds to the `data_test_31.07.npy`
+        - And other videos of the skeleton produced for validation by `feature.ipynb`
 
 ## How to use the project
 

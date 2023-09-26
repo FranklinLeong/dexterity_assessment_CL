@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import glob
 import cv2
-import os
 from skspatial.objects import Plane, Points
 
 '''Pipeline and helper functions'''

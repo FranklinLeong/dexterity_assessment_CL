@@ -64,8 +64,8 @@ This project is organized as follows :
         - the repository **std** that contains the plot of the standard deviation of each primary features of each participant
 - the repository **src** that includes : 
     - **feature.ipynb** that pre-processes the dataset **data_test_31.07.npy** and validate the primary features
-    - **create_features.ipynb** that produces the datasets in the repository **features** 
-    - **stats.ipynb** that produces some plots for statistical comparison
+    - **create_features.ipynb** that produces the datasets of the repository **features** 
+    - **stats.ipynb** that produces some plots for statistical comparison, that can be found in repository **figures**
     - **utils.py** that contains the pipeline, feature engineering and helper functions
     - the repository **videos** that contains : 
         - **Boutput0.mp4** which is the video that corresponds to the **data_test_31.07.npy**
@@ -74,6 +74,7 @@ This project is organized as follows :
 ## How to use the project
 
 Just make sure to have the libraries mentioned below installed on your environment before running the cells in the jupyter notebook.
+To pull the data files, please use lfs by typing `git lfs pull`.
 
 ## Libraries
 In this project the following libraries were used : 
@@ -84,3 +85,4 @@ In this project the following libraries were used :
 - seaborn
 - cv2
 - skspatial
+- [lfs](https://git-lfs.com/)

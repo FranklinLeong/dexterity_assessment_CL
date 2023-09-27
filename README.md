@@ -67,9 +67,6 @@ This project is organized as follows :
     - `create_features.ipynb` that produces the datasets of the repository `features` 
     - `stats.ipynb` that produces some plots for statistical comparison, that can be found in repository `figures`
     - `utils.py` that contains the pipeline, feature engineering and helper functions
-    - the repository `videos` that contains : 
-        - `Boutput0.mp4` which is the video that corresponds to the `data_test_31.07.npy`
-        - And other videos of the skeleton produced for validation by `feature.ipynb`
 
 ## How to use the project
 
